@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dub Simulator (Debug)</title> <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    /* CSS Styles remain identical to the previous version */
+    body {
+      margin: 0;
+      background-color: #000;
+      color: #fff;
+      font-family: sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px 0;
+    }
+    .phone-frame {
+      width: 40%; /* <-- Find and modify this line */
+      max-height: 95vh;
+      border: 16px solid #333;
+      border-radius: 40px;
+      padding: 50px;
+      box-sizing: border-box;
+      background-color: #000;
+      box-shadow: 0 0 0 12px #111;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      overflow-y: auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+.logo-container {
+    text-align: center; /* Center the image horizontally */
+    margin-bottom: 20px; /* Add some space below the logo */
+}
+
+.logo {
+    max-width: 150px; /* Set a max width for the logo */
+    height: auto; /* Maintain aspect ratio */
+    display: inline-block; /* Treat image as a block for text-align centering */
+}
+
+    .phone-frame::-webkit-scrollbar { display: none; }
+    .header { font-size: 24px; font-weight: bold; margin-bottom: 10px; color: #fea972; text-align:center }
+    .subheader { font-size: 16px; margin-bottom: 20px; }
+    .button { background-color: #fea972; color: #000; border: none; padding: 10px; font-weight: bold; font-size: 16px; border-radius: 10px; cursor: pointer; margin-bottom: 20px; width: 100%; box-sizing: border-box; }
+    .simulator-input, .investor-simulator { display: flex; flex-direction: column; gap: 20px; margin-bottom: 20px; }
+    .investor-simulator { margin-top: 30px; padding-top: 20px; border-top: 1px solid #333; }
+    .investor-simulator h3 { font-size: 18px; color: #fea972; margin-bottom: 0; }
+    .slider-container, .dropdown-container { display: flex; flex-direction: column; gap: 10px; }
+    .slider { width: 100%; -webkit-appearance: none; appearance: none; height: 12px; border-radius: 8px; background: #333; outline: none; transition: background-color 0.3s; }
+    .slider::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 25px; height: 25px; border-radius: 50%; background: #fea972; cursor: pointer; transition: background-color 0.3s; }
+    .slider::-moz-range-thumb { width: 25px; height: 25px; border-radius: 50%; background: #fea972; cursor: pointer; transition: background-color 0.3s; }
+    .earnings { margin: 10px 0; font-size: 16px; font-weight: bold; }
+    .earnings span { color: #fea972; }
+    #investorEarnings { color: #4CAF50; }
+    .chart-container { position: relative; width: 100%; height: 180px; margin-bottom: 5px; overflow: hidden; }
+    canvas { background-color: #111; border-radius: 10px; display: block; width: 100% !important; height: auto !important; }
+    select { width: 100%; background-color: #333; color: #fff; border: none; padding: 12px; font-size: 16px; border-radius: 10px; appearance: none; -webkit-appearance: none; -moz-appearance: none; cursor: pointer; transition: background-color 0.3s; background-image: url('data:image/svg+xml;utf8,<svg fill="%23fea972" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M7 10l5 5 5-5z"/><path d="M0 0h24v24H0z" fill="none"/></svg>'); background-repeat: no-repeat; background-position: right 10px center; padding-right: 40px; }
+    select:focus { background-color: #444; outline: none; }
+    .return-percent { color: #4CAF50; font-weight: bold; margin-left: 5px; }
+    label { font-size: 14px; color: #aaa; }
+  </style>
+</head>
+<body>
+  <div class="phone-frame">
+
+
+ <div class="logo-container">
+        <img src="https://cdn.prod.website-files.com/663ad627c7d2570b7fac36a2/663ad627c7d2570b7fac377d_dub%20outline%20logo.png" alt="Dub Logo" width="183" height="101" class="logo"> </div>
+
+    <div class="header">Welcome to ROI Labs</div>
+    <div class="subheader">Dub’s free simulator lets you test strategies, project your gains, and build confidence—without spending a cent.</div>
+
+    <div class="simulator-input" id="simulator">
+      <div class="dropdown-container">
+ <h3>Let's go back in time to 2021. <br> Here’s what you’d have gained going solo:</h3>
+        <label for="stock">Choose a risk level:</label>
+        <select id="stock" onchange="updateSimulations()">
+          <option value="sp500">Aggressive</option>
+          <option value="crypto">Moderate</option>
+          <option value="growth">Conservative</option>
+        </select>
+      </div>
+      <div class="slider-container">
+        <label for="amount">Choose amount to invest:</label>
+        <input type="range" id="amount" class="slider" min="100" max="10000" step="100" value="1000" oninput="updateSimulations()">
+        <div>Initial Investment: <span id="amountValue" style="color:#fea972; font-weight:bold;">$1000</span></div>
+      </div>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="stockChart"></canvas>
+    </div>
+    <div class="earnings">Total Earnings: <span id="earnings">$0</span></div>
+    <div class="investor-simulator">
+        <h3>But what if you'd followed a pro’s portfolio?:</h3>
+        <div class="dropdown-container">
+            <label for="investor">Select an expert:</label>
+            <select id="investor" onchange="updateSimulations()">
+                <option value="pelosi">Nancy Pelosi <span class="return-percent">(+67.18%)</span></option>
+                <option value="buffett">Warren Buffett <span class="return-percent">(+20.84%)</span></option>
+                <option value="powell">Jerome Powell <span class="return-percent">(+62.72%)</span></option>
+            </select>
+        </div>
+        <div class="chart-container">
+            <canvas id="investorChart"></canvas>
+        </div>
+        <div class="earnings">Total Earnings: <span id="investorEarnings">$0</span></div>
+    </div>
+<div class="header">Feeling FOMO yet? Let's fix that.</div>
+    <button class="button" style="margin-top: 25px;" onclick="location.href='#'">Find Your Perfect Mix</button>
+    
+
+  </div>
+
+  <script>
+    console.log("Script start."); // DEBUG
+
+    // === Chart Initialization ===
+    let stockChart, investorChart; // Declare variables
+
+    try {
+      console.log("Getting context for stockChart..."); // DEBUG
+      const ctxStock = document.getElementById('stockChart').getContext('2d');
+      console.log("Initializing stockChart..."); // DEBUG
+      stockChart = new Chart(ctxStock, { /* ... options ... */
+          type: 'line',
+          data: {
+              labels: ['2021', '2022', '2023', '2024', '2025'],
+              datasets: [{ label: 'Investment Growth', data: [], borderColor: '#fea972', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }]
+          },
+          options: commonChartOptions()
+      });
+      console.log("stockChart initialized:", stockChart); // DEBUG
+    } catch (e) {
+      console.error("Error initializing stockChart:", e); // DEBUG
+    }
+
+    try {
+      console.log("Getting context for investorChart..."); // DEBUG
+      const ctxInvestor = document.getElementById('investorChart').getContext('2d');
+       console.log("Initializing investorChart..."); // DEBUG
+      investorChart = new Chart(ctxInvestor, { /* ... options ... */
+          type: 'line',
+          data: {
+              labels: ['2021', '2022', '2023', '2024', '2025'],
+              datasets: [{ label: 'Investor Strategy Growth', data: [], borderColor: '#4CAF50', borderWidth: 2, pointRadius: 0, tension: 0.4, fill: false }]
+          },
+          options: commonChartOptions()
+      });
+      console.log("investorChart initialized:", investorChart); // DEBUG
+    } catch (e) {
+      console.error("Error initializing investorChart:", e); // DEBUG
+    }
+
+
+    // === Simulation Data ===
+    const stockReturnsMap = {
+      sp500: [1.15, 1.25, 1, .8, 1.2], 
+      crypto: [1.50, 1.40, 1, .8, 1.40],
+      growth: [1.08, 1.16, 1.14, 1, 1.19]
+    };
+    const investorReturnsMap = {
+        pelosi:  [1.30, .8, 1.4, 1.5, 1.7], // Cumulative product ≈ 3.62
+        buffett: [1.25, 1.30, 1.28, 1.32, 1.20], // Cumulative product ≈ 3.99
+        powell:  [1.28, 1.6, 1.3, 1, 1.38] 
+    };
+
+    // === Helper Function for Chart Options ===
+    function commonChartOptions() { /* ... options identical to previous version ... */
+        return {
+            responsive: true, maintainAspectRatio: false,
+            scales: {
+                y: { ticks: { color: '#aaa', callback: function(value) { return '$' + value.toLocaleString(); } }, beginAtZero: false, grid: { color: 'rgba(255, 255, 255, 0.1)' } },
+                x: { ticks: { color: '#aaa' }, grid: { display: false } }
+            },
+            plugins: {
+                legend: { display: false },
+                tooltip: { mode: 'index', intersect: false, callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) { label += '$' + context.parsed.y.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }); } return label; } } }
+            },
+            interaction: { mode: 'nearest', axis: 'x', intersect: false }
+        };
+    }
+
+    // === Main Update Function ===
+    function updateSimulations() {
+      console.log("--- updateSimulations called ---"); // DEBUG
+      try {
+        const amount = parseFloat(document.getElementById('amount').value);
+        const stockType = document.getElementById('stock').value;
+        const investorType = document.getElementById('investor').value;
+        console.log(`Amount: ${amount}, Stock: ${stockType}, Investor: ${investorType}`); // DEBUG
+
+        if (isNaN(amount) || amount <= 0) {
+            console.warn("Invalid amount, skipping update."); // DEBUG
+            return;
+        };
+
+        // --- Update First Chart (Stock/Index) ---
+        if (stockChart) { // Check if chart object exists
+            console.log("Calculating stock growth..."); // DEBUG
+            const stockReturns = stockReturnsMap[stockType];
+            const stockGrowth = [amount];
+            let currentStockValue = amount;
+            for (let i = 0; i < stockReturns.length; i++) { currentStockValue *= stockReturns[i]; stockGrowth.push(+(currentStockValue.toFixed(2))); }
+            const finalStockValue = stockGrowth[stockGrowth.length - 1];
+            console.log("Stock growth data:", stockGrowth.slice(1)); // DEBUG
+            stockChart.data.datasets[0].data = stockGrowth.slice(1);
+            console.log("Updating stockChart..."); // DEBUG
+            stockChart.update();
+            console.log("stockChart updated."); // DEBUG
+            document.getElementById('earnings').textContent = `$${(finalStockValue - amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+        } else {
+             console.error("stockChart object not found during update!"); // DEBUG
+        }
+
+
+        // --- Update Second Chart (Investor Style) ---
+         if (investorChart) { // Check if chart object exists
+            console.log("Calculating investor growth..."); // DEBUG
+            const investorReturns = investorReturnsMap[investorType];
+            const investorGrowth = [amount];
+            let currentInvestorValue = amount;
+            for (let i = 0; i < investorReturns.length; i++) { currentInvestorValue *= investorReturns[i]; investorGrowth.push(+(currentInvestorValue.toFixed(2))); }
+            const finalInvestorValue = investorGrowth[investorGrowth.length - 1];
+            console.log("Investor growth data:", investorGrowth.slice(1)); // DEBUG
+            investorChart.data.datasets[0].data = investorGrowth.slice(1);
+            console.log("Updating investorChart..."); // DEBUG
+            investorChart.update();
+            console.log("investorChart updated."); // DEBUG
+            document.getElementById('investorEarnings').textContent = `$${(finalInvestorValue - amount).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+         } else {
+             console.error("investorChart object not found during update!"); // DEBUG
+         }
+
+        // --- Update Slider Display ---
+        document.getElementById('amountValue').textContent = `$${amount.toLocaleString()}`;
+        console.log("--- updateSimulations finished ---"); // DEBUG
+
+      } catch (e) {
+          console.error("Error during updateSimulations:", e); // DEBUG
+      }
+    }
+
+    // === Initial Load ===
+    window.onload = () => {
+        console.log("Window loaded. Calling updateSimulations for initial draw."); // DEBUG
+        updateSimulations();
+    };
+
+    console.log("Script end."); // DEBUG
+
+  </script>
+</body>
+</html>
